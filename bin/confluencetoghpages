@@ -1,0 +1,154 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var path = require('path');
+var log = require('verbalize');
+var argv = require('minimist')(process.argv.slice(2));
+var progressBar = require('progress');
+var toMarkdown = require('to-markdown');
+
+// dev deps
+var sleep = require('sleep');
+
+
+/**
+ * Everything in the file should be customized
+ */
+
+// Verbalize `runner`
+log.runner = 'confluence-to-ghpages';
+
+// Use `-i` or `--input` to specify the source dir
+var input  = argv._[0] || argv.i || argv.input;
+
+// Use `-o` or `--output` to specify the source dir
+var output  = argv._[1] || argv.o || argv.output || 'output/';
+
+if (!input) {
+  log.error('Please provide a source folder, either as a first argument or with `-s`');
+  process.exit( 1 );
+}
+
+/**
+ * Application
+ */
+
+try {
+  fs.mkdirSync(output);
+  log.writeln('Created output folder');
+} catch(err) {
+  if (err.code != 'EEXIST') throw err;
+
+  rmDir(output, false);
+}
+
+fs.readdir( input, function( err, files ) {
+  if( err ) {
+      log.error( "Could not list the input directory.", err );
+      process.exit( 1 );
+  }
+
+  var bar = new progressBar(':current/:total :bar :percent | :file', {
+    width: 20,
+    total: files.length,
+    callback: () => {
+      log.success('  ' + log.runner + ' [done]');
+    }
+  });
+
+  files.forEach( function( file, index ) {
+
+    var filePath = path.resolve(path.join(input,file));
+    var outputFolder = path.resolve(output);
+    fs.stat(filePath, function(err, stat) {
+
+      if (stat.isFile()) {
+        var outputFile = path.join(outputFolder, path.basename(file, '.html') + '.md');
+
+        fs.readFile(filePath, 'utf-8', (err, data) => {
+          if (err) throw err;
+
+          var converted = convert(data);
+          fs.writeFileSync(outputFile, converted);
+
+          bar.tick({'file': file});
+        });
+      } else {
+        bar.tick();
+      }
+    });
+
+  });
+});
+
+function convert(data) {
+  var frontmatter = getFrontMatter(data);
+  var md = toMarkdown(data, {
+    converters: [
+      {
+        filter: function(node) {
+          return node.nodeName === "SPAN" && node.id === "title-text";
+        },
+        replacement: function(content) {
+          return "";
+        }
+      },
+      {
+        filter: ['div', 'span'],
+        replacement: function(content) {
+          return content;
+        }
+      }
+    ]
+  });
+
+  return frontmatter + '\n' + md;
+}
+
+function getFrontMatter(data) {
+  var template =
+`---
+layout: article_with_sidebar
+lang: en
+title: '%%title%%'
+---
+`;
+
+  var match = data.match(/<span id="title-text">\s(?:.*) : (.*)\s/);
+  if (match !== null) {
+    template = template.replace('%%title%%', match[1].trim());
+  }
+
+  return template;
+}
+
+function rmDir(dirPath, removeSelf) {
+  if (removeSelf === undefined)
+    removeSelf = true;
+  try { var files = fs.readdirSync(dirPath); }
+  catch(e) { return; }
+  if (files.length > 0)
+    for (var i = 0; i < files.length; i++) {
+      var filePath = dirPath + '/' + files[i];
+      if (fs.statSync(filePath).isFile())
+        fs.unlinkSync(filePath);
+      else
+        rmDir(filePath);
+    }
+  if (removeSelf)
+    fs.rmdirSync(dirPath);
+};
+
+// if(!fs.existsSync(file)) {
+//   fs.writeFileSync(file, '# Tasks\n\n');
+// }
+
+// fs.appendFile(file, ('- [ ] ' + task + '\n'), function (err) {
+//   if (err) {throw err;}
+
+//   log.writeln();
+//   log.writeln(log.gray('  todo [appended] ') + '\'' + task + '\' to ' + log.bold(file));
+
+//   // If all is well, log a success message.
+//   log.success('  ' + log.runner + ' [done]');
+// });
