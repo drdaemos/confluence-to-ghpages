@@ -138,17 +138,3 @@ function rmDir(dirPath, removeSelf) {
   if (removeSelf)
     fs.rmdirSync(dirPath);
 };
-
-// if(!fs.existsSync(file)) {
-//   fs.writeFileSync(file, '# Tasks\n\n');
-// }
-
-// fs.appendFile(file, ('- [ ] ' + task + '\n'), function (err) {
-//   if (err) {throw err;}
-
-//   log.writeln();
-//   log.writeln(log.gray('  todo [appended] ') + '\'' + task + '\' to ' + log.bold(file));
-
-//   // If all is well, log a success message.
-//   log.success('  ' + log.runner + ' [done]');
-// });
