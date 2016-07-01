@@ -35,8 +35,13 @@
     "test": "mocha -R test"
   },
   "dependencies": {
+    "cheerio": "^0.20.0",
+    "find": "^0.2.6",
     "minimist": "~0.0.8",
+    "mkdirp": "^0.5.1",
     "progress": "^1.1.8",
+    "recursive-readdir": "^2.0.0",
+    "sanitize-filename": "^1.6.0",
     "to-markdown": "^3.0.0",
     "verbalize": "~0.1.1"
   },

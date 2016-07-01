@@ -4,12 +4,8 @@ var fs = require('fs');
 var path = require('path');
 var log = require('verbalize');
 var argv = require('minimist')(process.argv.slice(2));
-var progressBar = require('progress');
-var toMarkdown = require('to-markdown');
-
-// dev deps
-var sleep = require('sleep');
-
+var utils = require('./utils');
+var Processor = require('./processor');
 
 /**
  * Everything in the file should be customized
@@ -39,102 +35,7 @@ try {
 } catch(err) {
   if (err.code != 'EEXIST') throw err;
 
-  rmDir(output, false);
+  utils.rmDir(output, false);
 }
 
-fs.readdir( input, function( err, files ) {
-  if( err ) {
-      log.error( "Could not list the input directory.", err );
-      process.exit( 1 );
-  }
-
-  var bar = new progressBar(':current/:total :bar :percent | :file', {
-    width: 20,
-    total: files.length,
-    callback: () => {
-      log.success('  ' + log.runner + ' [done]');
-    }
-  });
-
-  files.forEach( function( file, index ) {
-
-    var filePath = path.resolve(path.join(input,file));
-    var outputFolder = path.resolve(output);
-    fs.stat(filePath, function(err, stat) {
-
-      if (stat.isFile()) {
-        var outputFile = path.join(outputFolder, path.basename(file, '.html') + '.md');
-
-        fs.readFile(filePath, 'utf-8', (err, data) => {
-          if (err) throw err;
-
-          var converted = convert(data);
-          fs.writeFileSync(outputFile, converted);
-
-          bar.tick({'file': file});
-        });
-      } else {
-        bar.tick();
-      }
-    });
-
-  });
-});
-
-function convert(data) {
-  var frontmatter = getFrontMatter(data);
-  var md = toMarkdown(data, {
-    converters: [
-      {
-        filter: function(node) {
-          return node.nodeName === "SPAN" && node.id === "title-text";
-        },
-        replacement: function(content) {
-          return "";
-        }
-      },
-      {
-        filter: ['div', 'span'],
-        replacement: function(content) {
-          return content;
-        }
-      }
-    ]
-  });
-
-  return frontmatter + '\n' + md;
-}
-
-function getFrontMatter(data) {
-  var template =
-`---
-layout: article_with_sidebar
-lang: en
-title: '%%title%%'
----
-`;
-
-  var match = data.match(/<span id="title-text">\s(?:.*) : (.*)\s/);
-  if (match !== null) {
-    template = template.replace('%%title%%', match[1].trim());
-  }
-
-  return template;
-}
-
-function rmDir(dirPath, removeSelf) {
-  if (removeSelf === undefined)
-    removeSelf = true;
-  try { var files = fs.readdirSync(dirPath); }
-  catch(e) { return; }
-  if (files.length > 0)
-    for (var i = 0; i < files.length; i++) {
-      var filePath = dirPath + '/' + files[i];
-      if (fs.statSync(filePath).isFile())
-        fs.unlinkSync(filePath);
-      else
-        rmDir(filePath);
-    }
-  if (removeSelf)
-    fs.rmdirSync(dirPath);
-};
+new Processor({input: input, output: output}).run();
