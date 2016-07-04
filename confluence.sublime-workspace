@@ -4,12 +4,36 @@
 		"selected_items":
 		[
 			[
-				"outpu",
-				"outputFolder"
+				"moved",
+				"movedLinks"
+			],
+			[
+				"sa",
+				"sanitizeFilename"
+			],
+			[
+				"san",
+				"sanitizeFilename	(utils.js)"
+			],
+			[
+				"getF",
+				"getFilename"
+			],
+			[
+				"getFil",
+				"getFilename	(converter.js)"
 			],
 			[
 				"con",
-				"converted"
+				"converter"
+			],
+			[
+				"folder",
+				"folderPath"
+			],
+			[
+				"outpu",
+				"outputFolder"
 			],
 			[
 				"mar",
@@ -490,30 +514,6 @@
 			[
 				"layout",
 				"list=\"layout_settings	(settings.webmaster_mode_switcher.tpl)"
-			],
-			[
-				"margin",
-				"margin-top"
-			],
-			[
-				"PARAM",
-				"PARAM_METADATA	(AView.php)"
-			],
-			[
-				"meta",
-				"metadata"
-			],
-			[
-				"getWe",
-				"getWeightActual"
-			],
-			[
-				"getw",
-				"getWeight	(AView.php)"
-			],
-			[
-				"getInn",
-				"getInnerTemplate"
 			]
 		]
 	},
@@ -531,15 +531,84 @@
 			"file": "bin/confluencetoghpages",
 			"settings":
 			{
-				"buffer_size": 3104,
+				"buffer_size": 927,
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "/home/daemos/repos/xc5-docs/getting-started/index.md",
+			"file": "bin/processor.js",
 			"settings":
 			{
-				"buffer_size": 4960,
+				"buffer_size": 4487,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "diff --git a/bin/processor.js b/bin/processor.js\nindex 3d759e5..a9e9509 100644\n--- a/bin/processor.js\n+++ b/bin/processor.js\n@@ -10,6 +10,7 @@ var utils = require('./utils');\n function Processor(options) {\n   this.input = options.input;\n   this.output = options.output;\n+  this.movedLinks = [];\n }\n \n Processor.prototype.run = function() {\n@@ -54,7 +55,13 @@ Processor.prototype.convertFiles = function (files) {\n           var folderPath = converter.getFilepath(data);\n           var filename = converter.getFilename(data) || path.basename(file, '.html');\n \n-          utils.createDir(path.join(outputFolder, folderPath));\n+          // write old and new path to dictionary to fix links later\n+          self.movedLinks.push({\n+            'oldLink': file,\n+            'newLink': path.join(folderPath, filename + '.html')\n+          });\n+          \n+\n           var outputFile = path.join(outputFolder, folderPath, filename + '.md');\n           fs.writeFileSync(outputFile, converted);\n \n@@ -77,7 +84,7 @@ Processor.prototype.moveIndexPages = function () {\n         process.exit( 1 );\n     }\n \n-    self.setupProgressBar(files.length, 'Moving index pages');\n+    self.setupProgressBar(files.length, 'Moving index pages', self.fixLinks.bind(self));\n \n     files.forEach( function( file, index ) {\n       var filePath = file;\n@@ -92,7 +99,13 @@ Processor.prototype.moveIndexPages = function () {\n \n           if (dirs.length == 1) {\n             var dest = path.join(dirs[0], 'index.md');\n+\n+            // fix link\n+            var link = _.findWhere(self.movedLinks, { newLink: file });\n+            link.newLink = path.join(dirs[0], 'index.md');\n+\n             fs.renameSync(file, path.join(dirs[0], 'index.md'));\n+\n             self.bar.tick({file: filename});\n           } else {\n             self.bar.tick({file: filename});\n@@ -107,4 +120,40 @@ Processor.prototype.moveIndexPages = function () {\n   });\n }\n \n+Processor.prototype.fixLinks = function () {\n+  var self = this;\n+\n+  readdirRec(this.output, function( err, files ) {\n+    if( err ) {\n+        log.error( \"Could not list the output directory to move index pages.\", err );\n+        process.exit( 1 );\n+    }\n+\n+    self.setupProgressBar(files.length, 'Fixing moved links');\n+\n+    files.forEach( function( file, index ) {\n+      var filePath = file;\n+\n+      fs.stat(filePath, function(err, stat) {\n+        if (err) throw err;\n+\n+        if (stat.isFile()) {\n+          var filename = path.basename(file, '.md');\n+          fs.readFile(filePath, 'utf-8', (err, data) => {\n+            if (err) throw err;\n+\n+            var fixed = converter.fixLinks(data, self.movedLinks);\n+            fs.writeFileSync(file, fixed);\n+\n+            self.bar.tick({file: filename});\n+          });\n+        } else {\n+          self.bar.tick({file: 'DIR'});\n+        }\n+      });\n+    });\n+\n+  });\n+}\n+\n module.exports = Processor;\n\\ No newline at end of file\n",
+			"settings":
+			{
+				"buffer_size": 2910,
+				"line_ending": "Unix",
+				"name": "Git Diff",
+				"read_only": true,
+				"scratch": true
+			}
+		},
+		{
+			"file": "node_modules/find/index.js",
+			"settings":
+			{
+				"buffer_size": 8380,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "bin/utils.js",
+			"settings":
+			{
+				"buffer_size": 1168,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "bin/converter.js",
+			"settings":
+			{
+				"buffer_size": 3897,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "node_modules/marked-toc/node_modules/gray-matter/test/fixtures/autodetect-javascript.md",
+			"settings":
+			{
+				"buffer_size": 242,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "Searching 4993 files for \"TableItemsList\" (regex)\n\n/home/daemos/repos/confluence-to-ghpages/input/8225347.html:\n  153      echo $key . &#39;: &#39; . $product-&gt;getName() . &#39;&lt;br /&gt;&#39;;\n  154  }</pre>\n  155: </div></div><p>It will return all products with ID less than 20. If we comment the <code>$cnd-&gt;myCond = true;</code> part, then all products will be returned.</p><p>Imagine that you have dozen of conditions for pulling products. In this case, this approach will be very helpful for you.</p><p><em>Note: if you need to create search() method for your own entity, use <a href=\"Creating-new-entity----Introduction-of-editable-ItemsList-in-admin-area_8225303.html#Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatingRepositoryclass\">this guide</a></em><em> for its general implementation.</em></p><h1 id=\"search()method-Modulepack\">Module pack</h1><p>You can download this module example from here: <a href=\"https://dl.dropboxusercontent.com/u/23858825/Tony-SearchRepoDemo-v5_1_0.tar\" class=\"external-link\" rel=\"nofollow\">https://dl.dropboxusercontent.com/u/23858825/Tony-SearchRepoDemo-v5_1_0.tar</a></p>\n  156                      </div>\n  157  \n\n/home/daemos/repos/confluence-to-ghpages/input/Creating-new-entity----Introduction-of-editable-ItemsList-in-admin-area_8225303.html:\n   39                      </div>\n   40                      <div id=\"main-content\" class=\"wiki-content group\">\n   41:                     <h1 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-Introduction\">Introduction</h1><p>This article describes how developers can create new entity in X-Cart store. This article's example is how to create quick messages (they are our new entities) that can be created in admin area and then 3 latest active ones will be shown in storefront.</p><h1 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-TableofContents\">Table of Contents</h1><p><style type='text/css'>/*<![CDATA[*/\n   42  div.rbtoc1467117627488 {padding: 0px;}\n   43  div.rbtoc1467117627488 ul {list-style: disc;margin-left: 0px;}\n   ..\n   46  /*]]>*/</style><div class='toc-macro rbtoc1467117627488'>\n   47  <ul class='toc-indentation'>\n   48: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Introduction'>Introduction</a></li>\n   49: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-TableofContents'>Table of Contents</a></li>\n   50: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Implementation'>Implementation</a>\n   51  <ul class='toc-indentation'>\n   52: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatingQuickMessageentity'>Creating Quick Message entity</a></li>\n   53: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatingRepositoryclass'>Creating Repository class</a></li>\n   54: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatinginterfaceforcreatingandeditingQuickMessagesinadminarea'>Creating interface for creating and editing Quick Messages in admin area</a></li>\n   55: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Checkingintermittentresults'>Checking intermittent results</a></li>\n   56: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Showingquickmessagesincustomerarea'>Showing quick messages in customer area</a></li>\n   57: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Checkingthefinalresults'>Checking the final results</a></li>\n   58  </ul>\n   59  </li>\n   60: <li><a href='#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Modulepack'>Module pack</a></li>\n   61  </ul>\n   62: </div></p><h1 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-Implementation\">Implementation</h1><p>First of all we <a href=\"Step-1---creating-simplest-module_524296.html\">create an empty module</a> with developer ID <strong>Tony</strong> and module ID <strong>NewEntityDemo</strong>. In this module, we <a href=\"Creating-new-page_8224999.html\">create a page</a> <code>target=quick_messages</code> in admin area. We create:</p><ul><li>empty controller class <code>\\XLite\\Module\\Tony\\NewEntityDemo\\Controller\\Admin\\QuickMessages</code></li><li><p>viewer class <code>\\XLite\\Module\\Tony\\NewEntityDemo\\View\\Page\\Admin\\QuickMessages</code> with the following content: </p><div class=\"code panel pdl\" style=\"border-width: 1px;\"><div class=\"codeContent panelContent pdl\">\n   63  <pre class=\"theme: Confluence; brush: php; gutter: false\" style=\"font-size:12px;\">&lt;?php\n   64  // vim: set ts=4 sw=4 sts=4 et:\n   ..\n   93      }\n   94  }</pre>\n   95: </div></div></li><li>empty template <code>&lt;X-Cart&gt;/skins/admin/en/modules/Tony/NewEntityDemo/page/quick_messages/body.tpl</code></li></ul><h2 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatingQuickMessageentity\">Creating Quick Message entity</h2><p>In order to create a new entity in X-Cart, we have to create a new <a href=\"X-Cart-classes-structure-and-namespaces_524301.html\">Model class</a>. We create <code>&lt;X-Cart&gt;/classes/XLite/Module/Tony/NewEntityDemo/Model/QuickMessage.php</code> file with the following content: </p><div class=\"code panel pdl\" style=\"border-width: 1px;\"><div class=\"codeContent panelContent pdl\">\n   96  <pre class=\"theme: Confluence; brush: php; gutter: false\" style=\"font-size:12px;\">&lt;?php\n   97  \n   ..\n  150       */\n  151      protected $body = &#39;&#39;;</pre>\n  152: </div></div></li></ol><p>We have created the <strong>Model</strong> class and now we need to create <strong>repository</strong> class for QuickMessage entity.</p><h2 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatingRepositoryclass\">Creating Repository class</h2><p>Repository class is used in order to pull entities' info from the database. We need an implementation of <a href=\"8225347.html\"><code>search()</code> method</a> in it in order to allow proper work with ItemsList.</p><p>We create the <code>&lt;X-Cart&gt;/classes/XLite/Module/Tony/NewEntityDemo/Model/Repo/QuickMessage.php</code> file with the following content: </p><div class=\"code panel pdl\" style=\"border-width: 1px;\"><div class=\"codeContent panelContent pdl\">\n  153  <pre class=\"theme: Confluence; brush: php; gutter: false\" style=\"font-size:12px;\">&lt;?php\n  154  \n  ...\n  203      }\n  204  }</pre>\n  205: </div></div><p>Although, the implementation of repository class looks quite cumbersome, basically we only have to have <code>search()</code> method implemented and other 6 additional methods are just for keeping structure of the code atomic.</p><p>After creating <strong>Model</strong> and <strong>Repository</strong> classes, we are done with creating entity classes.</p><h2 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatinginterfaceforcreatingandeditingQuickMessagesinadminarea\">Creating interface for creating and editing Quick Messages in admin area</h2><p>Now it is time to add a form where you can create, edit or delete quick messages to the <code>target=quick_messages</code> page. This step can be divided to sub-steps:</p><ol><li>Create <strong>ItemsList</strong> widget;</li><li>Create a form widget that will be able to submit <strong>ItemsList</strong> values;</li><li>Add <strong>ItemsList</strong> widget and form around it to a template of the <code>target=quick_messages</code> page;</li><li>Add a method to our controller that will be able to process requests of submitting <strong>ItemsList</strong> form.</li></ol><p>Let us start with creating <strong>ItemsList</strong>. ItemsList is a widget that displays info about entities in the structured format. Our widget should produce a result similar to the snapshot below: </p><p><img class=\"confluence-embedded-image confluence-content-image-border image-center\" height=\"290\" width=\"900\" src=\"attachments/8225303/8356165.png\" data-image-src=\"attachments/8225303/8356165.png\"></p><p>As you may have noticed, admin area of X-Cart is full of similar <strong>ItemsLists</strong>. Moreover, product and category lists in storefront are ItemsLists too, even though they look a bit differently.</p><p>In order to create an ItemsList for quick messages, we create the <code style=\"line-height: 1.4285715;\">&lt;X-Cart&gt;/classes/XLite/Module/Tony/NewEntityDemo/View/ItemsList/Model/QuickMessage.php</code> file with the following content: </p><div class=\"code panel pdl\" style=\"border-width: 1px;\"><div class=\"codeContent panelContent pdl\">\n  206  <pre class=\"theme: Confluence; brush: php; gutter: false\" style=\"font-size:12px;\">&lt;?php\n  207    \n  ...\n  315  </div></div><p>Then, we update, create and remove entities based on the info in this ItemsList. These processes are described in method: </p><div class=\"code panel pdl\" style=\"border-width: 1px;\"><div class=\"codeContent panelContent pdl\">\n  316  <pre class=\"theme: Confluence; brush: php; gutter: false\" style=\"font-size:12px;\">$list-&gt;processQuick();</pre>\n  317: </div></div><p>Finally, we open the <strong>target=quick_messages</strong> page with updated data.</p><h2 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-Checkingintermittentresults\">Checking intermittent results</h2><p>Now we are done with the admin part of this mod and we can create our quick messages in admin area. Re-deploy the store and go to <code>admin.php?target=quick_messages</code> page. You should see the following result:<img class=\"confluence-embedded-image confluence-content-image-border image-center\" height=\"162\" width=\"545\" src=\"attachments/8225303/8356166.png\" data-image-src=\"attachments/8225303/8356166.png\"></p><p>Of course, we do not have any quick messages yet, but if you click <strong>Create</strong> button, you will be able to create some:<img class=\"confluence-embedded-image confluence-content-image-border image-center\" height=\"301\" width=\"900\" src=\"attachments/8225303/8356167.png\" data-image-src=\"attachments/8225303/8356167.png\"></p><p>Once you add some quick messages, do not forget to save results by clicking <strong>Save changes</strong> button.</p><h2 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-Showingquickmessagesincustomerarea\">Showing quick messages in customer area</h2><p>We will show three latest quick messages in <a href=\"Creating-sidebar-menu-in-customer-area_7505759.html\">sidebar box</a> in the left-hand side menu in storefront.</p><p>First, we create the <a href=\"Working-with-viewer-classes_8224836.html\">viewer class</a>. For that we create the <code>&lt;X-Cart&gt;/classes/XLite/Module/Tony/NewEntityDemo/View/QuickMessageMenu.php</code> file with the following content: </p><div class=\"code panel pdl\" style=\"border-width: 1px;\"><div class=\"codeContent panelContent pdl\">\n  318  <pre class=\"theme: Confluence; brush: php; gutter: false\" style=\"font-size:12px;\">&lt;?php\n  319  \n  ...\n  361  	&lt;/ul&gt;\n  362  {end:}</pre>\n  363: </div></div><p>This code can be read as follows. If there are quick messages – <code>{if:getMessages()}</code> – then we create <code>&lt;ul&gt;</code> element and walk through each element returned by <code>getMessages()</code> method – <code>{foreach:getMessages(), message}</code> – displaying text of each quick message inside <code>&lt;li&gt;</code> element – <code>&lt;li&gt;{message.body}&lt;/li&gt;</code>.</p><h2 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-Checkingthefinalresults\">Checking the final results</h2><p>We are done with this mod and we have to re-deploy the store one more time. If you have any active quick messages in admin area, you will see the following picture in the storefront: <img class=\"confluence-embedded-image confluence-content-image-border image-center\" height=\"327\" width=\"505\" src=\"attachments/8225303/8356168.png\" data-image-src=\"attachments/8225303/8356168.png\"></p><h1 id=\"Creatingnewentity--IntroductionofeditableItemsListinadminarea-Modulepack\">Module pack</h1><p>You can download the code of this module from here: <a href=\"https://dl.dropboxusercontent.com/u/23858825/Tony-NewEntityDemo-v5_1_0.tar\" class=\"external-link\" rel=\"nofollow\">https://dl.dropboxusercontent.com/u/23858825/Tony-NewEntityDemo-v5_1_0.tar</a></p>\n  364                      </div>\n  365  \n\n/home/daemos/repos/confluence-to-ghpages/output/developer_docs/basics/creating_new_entity_--_introduction_of_editable_itemslist_in_admin_area.md:\n   14  # Table of Contents\n   15  \n   16: *   [Introduction](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Introduction)\n   17: *   [Table of Contents](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-TableofContents)\n   18: *   [Implementation](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Implementation)\n   19:     *   [Creating Quick Message entity](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatingQuickMessageentity)\n   20:     *   [Creating Repository class](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatingRepositoryclass)\n   21:     *   [Creating interface for creating and editing Quick Messages in admin area](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatinginterfaceforcreatingandeditingQuickMessagesinadminarea)\n   22:     *   [Checking intermittent results](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Checkingintermittentresults)\n   23:     *   [Showing quick messages in customer area](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Showingquickmessagesincustomerarea)\n   24:     *   [Checking the final results](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Checkingthefinalresults)\n   25: *   [Module pack](#Creatingnewentity--IntroductionofeditableItemsListinadminarea-Modulepack)\n   26  \n   27  # Implementation\n\n/home/daemos/repos/confluence-to-ghpages/output/developer_docs/basics/searching_entities_in_repositories/search()_method.md:\n  154  Imagine that you have dozen of conditions for pulling products. In this case, this approach will be very helpful for you.\n  155  \n  156: _Note: if you need to create search() method for your own entity, use [this guide]({{ baseurl_lang }}/developer_docs/basics/creating_new_entity_--_introduction_of_editable_itemslist_in_admin_area.html#Creatingnewentity--IntroductionofeditableItemsListinadminarea-CreatingRepositoryclass)_ _for its general implementation._\n  157  \n  158  # Module pack\n\n32 matches across 4 files\n",
+			"settings":
+			{
+				"buffer_size": 14516,
+				"line_ending": "Unix",
+				"name": "Find Results",
+				"scratch": true
+			}
+		},
+		{
+			"file": "input/Creating-new-page_8224999.html",
+			"settings":
+			{
+				"buffer_size": 15546,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "input/Creating-a-payment-method_8225448.html",
+			"settings":
+			{
+				"buffer_size": 18658,
 				"line_ending": "Unix"
 			}
 		},
@@ -555,7 +624,7 @@
 			"file": "package.json",
 			"settings":
 			{
-				"buffer_size": 1034,
+				"buffer_size": 1204,
 				"line_ending": "Unix"
 			}
 		}
@@ -568,9 +637,13 @@
 	"command_palette":
 	{
 		"height": 500.0,
-		"last_filter": "w",
+		"last_filter": "diff",
 		"selected_items":
 		[
+			[
+				"diff",
+				"Git: Diff Current File"
+			],
 			[
 				"w",
 				"Whitespace: Remove Trailing Whitespace"
@@ -665,6 +738,10 @@
 	],
 	"file_history":
 	[
+		"/home/daemos/repos/confluence-to-ghpages/output/developer_docs/basics/flexy_guide.md",
+		"/home/daemos/repos/confluence-to-ghpages/output/developer_docs/basics/creating_new_entity_--_introduction_of_editable_itemslist_in_admin_area.md",
+		"/home/daemos/repos/confluence-to-ghpages/input/7504112.html",
+		"/home/daemos/repos/xc5-docs/getting-started/index.md",
 		"/home/daemos/repos/xc5-docs/changelogs/5.1.10---21-Jan-2015_8225438.md",
 		"/home/daemos/repos/confluence-to-ghpages/input/5.0.11---18-Feb-2014_7504532.html",
 		"/home/daemos/repos/confluence-to-ghpages/output/9306814.html",
@@ -788,11 +865,7 @@
 		"/home/daemos/repos/test/src/var/run/classes/XLite/Controller/AController.php.decorators",
 		"/home/daemos/repos/test/src/skins/default/en/js/common.js",
 		"/home/daemos/repos/test/src/var/log/daemos.log.2016-03-09.php",
-		"/home/daemos/repos/test/src/skins/default/en/mini_cart/minicart.js",
-		"/home/daemos/repos/test/src/var/log/daemos.log.2016-03-10.php",
-		"/home/daemos/repos/test/src/vendor/doctrine/orm/lib/Doctrine/ORM/Query/ParserResult.php",
-		"/home/daemos/repos/test/src/classes/XLite/Module/XC/Add2CartPopup/View/Add2Cart.php",
-		"/home/daemos/repos/test/src/skins/default/en/modules/XC/Add2CartPopup/js/add2cart_popup.js"
+		"/home/daemos/repos/test/src/skins/default/en/mini_cart/minicart.js"
 	],
 	"find":
 	{
@@ -874,9 +947,14 @@
 	},
 	"find_state":
 	{
-		"case_sensitive": true,
+		"case_sensitive": false,
 		"find_history":
 		[
+			"<a",
+			"\");\n",
+			"TableItemsList",
+			"is",
+			"function (.*)\\(",
 			"search.js",
 			"breadcrumb",
 			"Magento",
@@ -999,12 +1077,7 @@
 			"403",
 			"setHeaderStatus",
 			"setHeaer",
-			"========",
-			"===========",
-			"__FILE__",
-			"silent",
-			"isRedirectNeeded",
-			"callAction"
+			"========"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -1012,6 +1085,7 @@
 		"regex": false,
 		"replace_history":
 		[
+			"Processor.prototype.$1 = function \\(",
 			"X-Cart",
 			"InlineEditableController",
 			"this.base",
@@ -1041,7 +1115,7 @@
 	"groups":
 	[
 		{
-			"selected": 1,
+			"selected": 6,
 			"sheets":
 			[
 				{
@@ -1069,7 +1143,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 1,
+					"stack_index": 6,
 					"type": "text"
 				},
 				{
@@ -1078,36 +1152,192 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 3104,
+						"buffer_size": 927,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3104,
-								3104
+								927,
+								927
 							]
 						],
 						"settings":
 						{
 							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
-							"tab_size": 2
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 132.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "bin/processor.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4487,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3272,
+								3272
+							]
+						],
+						"settings":
+						{
+							"open_with_edit": true,
+							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 192.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2910,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								570,
+								570
+							]
+						],
+						"settings":
+						{
+							"default_dir": "/home/daemos/repos/confluence-to-ghpages",
+							"git_root_dir": "/home/daemos/repos/confluence-to-ghpages",
+							"syntax": "Packages/Diff/Diff.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true,
+							"word_wrap": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "node_modules/find/index.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8380,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2020,
+								2020
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 8,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "bin/utils.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1168,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								883,
+								883
+							]
+						],
+						"settings":
+						{
+							"open_with_edit": true,
+							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": -0.0,
+						"translation.y": 144.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "bin/converter.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3897,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1922,
+								1922
+							]
+						],
+						"settings":
+						{
+							"open_with_edit": true,
+							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 816.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,
 					"type": "text"
 				},
 				{
-					"buffer": 2,
-					"file": "/home/daemos/repos/xc5-docs/getting-started/index.md",
+					"buffer": 7,
+					"file": "node_modules/marked-toc/node_modules/gray-matter/test/fixtures/autodetect-javascript.md",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4960,
+						"buffer_size": 242,
 						"regions":
 						{
 						},
@@ -1126,11 +1356,243 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 14516,
+						"regions":
+						{
+							"match":
+							{
+								"flags": 112,
+								"regions":
+								[
+									[
+										720,
+										734
+									],
+									[
+										1503,
+										1517
+									],
+									[
+										1863,
+										1877
+									],
+									[
+										2248,
+										2262
+									],
+									[
+										2367,
+										2381
+									],
+									[
+										2494,
+										2508
+									],
+									[
+										2648,
+										2662
+									],
+									[
+										2798,
+										2812
+									],
+									[
+										2941,
+										2955
+									],
+									[
+										3170,
+										3184
+									],
+									[
+										3321,
+										3335
+									],
+									[
+										3489,
+										3503
+									],
+									[
+										3659,
+										3673
+									],
+									[
+										3792,
+										3806
+									],
+									[
+										4887,
+										4901
+									],
+									[
+										5747,
+										5761
+									],
+									[
+										6858,
+										6872
+									],
+									[
+										9202,
+										9216
+									],
+									[
+										10209,
+										10223
+									],
+									[
+										11451,
+										11465
+									],
+									[
+										11963,
+										11977
+									],
+									[
+										12564,
+										12578
+									],
+									[
+										12672,
+										12686
+									],
+									[
+										12780,
+										12794
+									],
+									[
+										12906,
+										12920
+									],
+									[
+										13040,
+										13054
+									],
+									[
+										13218,
+										13232
+									],
+									[
+										13392,
+										13406
+									],
+									[
+										13541,
+										13555
+									],
+									[
+										13684,
+										13698
+									],
+									[
+										13797,
+										13811
+									],
+									[
+										14374,
+										14388
+									]
+								],
+								"scope": ""
+							}
+						},
+						"selection":
+						[
+							[
+								1390,
+								1390
+							]
+						],
+						"settings":
+						{
+							"default_dir": "/home/daemos/repos/confluence-to-ghpages",
+							"detect_indentation": false,
+							"line_numbers": false,
+							"output_tag": 1,
+							"result_base_dir": "",
+							"result_file_regex": "^([A-Za-z\\\\/<].*):$",
+							"result_line_regex": "^ +([0-9]+):",
+							"scroll_past_end": true,
+							"syntax": "Packages/Default/Find Results.hidden-tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 96.0,
+						"zoom_level": 1.0
+					},
 					"stack_index": 2,
 					"type": "text"
 				},
 				{
-					"buffer": 3,
+					"buffer": 9,
+					"file": "input/Creating-new-page_8224999.html",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 15546,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								6282,
+								6282
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/HTML/HTML.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1348.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 9,
+					"type": "text"
+				},
+				{
+					"buffer": 10,
+					"file": "input/Creating-a-payment-method_8225448.html",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 18658,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								14817,
+								14817
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/HTML/HTML.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2692.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 10,
+					"type": "text"
+				},
+				{
+					"buffer": 11,
 					"file": ".verbrc.md",
 					"semi_transient": false,
 					"settings":
@@ -1154,16 +1616,16 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 4,
+					"stack_index": 12,
 					"type": "text"
 				},
 				{
-					"buffer": 4,
+					"buffer": 12,
 					"file": "package.json",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1034,
+						"buffer_size": 1204,
 						"regions":
 						{
 						},
@@ -1176,13 +1638,15 @@
 						],
 						"settings":
 						{
-							"syntax": "Packages/Theme - SoDaReloaded/settings/langs/npm JSON.tmLanguage"
+							"syntax": "Packages/Theme - SoDaReloaded/settings/langs/npm JSON.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 3,
+					"stack_index": 11,
 					"type": "text"
 				}
 			]
@@ -1235,7 +1699,7 @@
 	"project": "confluence.sublime-project",
 	"replace":
 	{
-		"height": 58.0
+		"height": 88.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -1244,6 +1708,14 @@
 		"last_filter": "",
 		"selected_items":
 		[
+			[
+				"aj",
+				"node_modules/marked-toc/node_modules/gray-matter/test/fixtures/autodetect-javascript.md"
+			],
+			[
+				"find/index",
+				"node_modules/find/index.js"
+			],
 			[
 				"view/button/",
 				"src/classes/XLite/View/Button/AButton.php"
@@ -1747,14 +2219,6 @@
 			[
 				"add2ca",
 				"src/classes/XLite/Module/XC/Add2CartPopup/View/Add2Cart.php"
-			],
-			[
-				"model/pr",
-				"src/classes/XLite/Model/Product.php"
-			],
-			[
-				"flexyc",
-				"src/classes/XLite/Core/FlexyCompiler.php"
 			]
 		],
 		"width": 0.0

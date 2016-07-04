@@ -43,6 +43,7 @@
     "recursive-readdir": "^2.0.0",
     "sanitize-filename": "^1.6.0",
     "to-markdown": "^3.0.0",
+    "underscore": "^1.8.3",
     "verbalize": "~0.1.1"
   },
   "devDependencies": {

@@ -1,10 +1,12 @@
 var cheerio = require('cheerio');
+var _ = require('underscore');
 var toMarkdown = require('to-markdown');
 var path = require('path');
 var utils = require('./utils');
 
 function convert(data) {
   var frontmatter = getFrontMatter(data);
+  var data = preProcessData(data);
   var md = toMarkdown(data, {
     converters: [
       {
@@ -12,7 +14,7 @@ function convert(data) {
           return (node.nodeName === "PRE" && node.className.contains('Confluence'));
         },
         replacement: function(content) {
-          return content;
+          return '{% highlight php %}' + content + '{% endhighlight %}';
         }
       },
       {
@@ -20,7 +22,7 @@ function convert(data) {
           return (node.nodeName === "DIV" && node.className.contains('codeContent'));
         },
         replacement: function(content) {
-          return '{% highlight php %}' + content + '{% endhighlight %}';
+          return content;
         }
       },
       {
@@ -53,12 +55,39 @@ function convert(data) {
   return frontmatter + '\n' + md;
 }
 
+function preProcessData(data) {
+  $ = cheerio.load(data);
+
+  // insert anchors
+  // $("#main-content [id!=''][id]").each(function() {
+  //   var anchor = "<a id='" + $(this).attr('id') + "'></a>";
+  //   $(this).before(anchor);
+  // });
+
+  // fix table of contents
+  $(".toc-macro a").each(function() {
+    var anchor = utils.convertToAnchor($(this).text());
+    console.log(anchor);
+    $(this).attr('href', '#' + anchor);
+  });
+
+  return $.html();
+}
+
 function postProcessMarkdown(md) {
   // add / before image urls
   var re = /\!\[(.*)\]\((.*)\)/g;
   var subst = '![$1]({{ site.baseurl }}/$2)';
 
   return md.replace(re, subst);
+}
+
+function fixLinks(content, dictionary) {
+  _.each(dictionary, function(item, index, list) {
+    content = content.replace(item.oldLink, '{{ baseurl_lang }}/' + item.newLink);
+  });
+
+  return content;
 }
 
 function getCategories(data) {
@@ -104,6 +133,8 @@ lang: en
 title: '%%title%%'
 categories: %%categories%%
 ---
+
+{% include global.html %}
 `;
 
   var categories = getCategories(data);
@@ -127,3 +158,4 @@ exports.getFrontMatter = getFrontMatter;
 exports.getFilepath = getFilepath;
 exports.getCategories = getCategories;
 exports.getFilename = getFilename;
+exports.fixLinks = fixLinks;

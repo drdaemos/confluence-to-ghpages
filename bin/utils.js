@@ -34,8 +34,13 @@ function sanitizeFilename(string) {
       : '';
 }
 
+function convertToAnchor(string) {
+  return string.toLowerCase().replace(/\s/g, '-');
+}
+
 String.prototype.contains = function(it) { return this.indexOf(it) !== -1; };
 
 exports.rmDir = rmDir;
 exports.createDir = createDir;
 exports.sanitizeFilename = sanitizeFilename;
+exports.convertToAnchor = convertToAnchor;
