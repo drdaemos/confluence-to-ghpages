@@ -86,7 +86,7 @@ Processor.prototype.moveIndexPages = function () {
         process.exit( 1 );
     }
 
-    self.setupProgressBar(files.length, 'Moving index pages', self.fixLinks.bind(self));
+    self.setupProgressBar(files.length, 'Moving index pages', self.moveDeveloperDocs.bind(self));
 
     files.forEach( function( file, index ) {
       var filePath = file;
@@ -123,16 +123,69 @@ Processor.prototype.moveIndexPages = function () {
   });
 }
 
+Processor.prototype.moveDeveloperDocs = function () {
+  var self = this;
+  var dirs = find.dirSync('developer_docs', this.output);
+
+  if (dirs.length > 0) {
+    var root = dirs[0];
+
+    readdirRec(root, function( err, files ) {
+      if( err ) {
+          log.error( "Could not list the output directory to move developer docs folder.", err );
+          process.exit( 1 );
+      }
+
+      self.setupProgressBar(files.length, 'Moving developer docs', self.fixLinks.bind(self));
+
+      files.forEach( function( file, index ) {
+        var filePath = file;
+
+        if (file == 'output/developer_docs/index.md') {
+          self.bar.tick({file: file});
+          return;
+        }
+
+        var stat = fs.statSync(filePath);
+
+        if (stat.isFile()) {
+          var filename = path.basename(file, '.md');
+
+          // fix link
+          var search = path.relative(self.output, path.join(path.dirname(file), path.basename(file, '.md') + '.html'));
+          var link = _.findWhere(self.movedLinks, { newLink: search });
+          link.newLink = path.relative(self.output, file.replace('developer_docs/', '').replace('.md', '') + '.html');
+
+          var newPath = path.join(self.output, path.relative(root, file));
+
+          utils.createDir(path.dirname(newPath));
+
+          fs.renameSync(file, newPath);
+
+          self.bar.tick({file: filename});
+        } else {
+          self.bar.tick({file: 'DIR'});
+        }
+
+      });
+
+      // utils.rmDir(root, true);
+
+    });
+  }
+}
+
 Processor.prototype.fixLinks = function () {
   var self = this;
 
   readdirRec(this.output, function( err, files ) {
     if( err ) {
-        log.error( "Could not list the output directory to move index pages.", err );
+        log.error( "Could not list the output directory to fix links.", err );
         process.exit( 1 );
     }
 
     self.setupProgressBar(files.length, 'Fixing moved links');
+
 
     files.forEach( function( file, index ) {
       var filePath = file;
