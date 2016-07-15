@@ -4,8 +4,8 @@ var toMarkdown = require('to-markdown');
 var path = require('path');
 var utils = require('./utils');
 
-function convert(data) {
-  var frontmatter = getFrontMatter(data);
+function convert(data, id) {
+  var frontmatter = getFrontMatter(data, id);
   var data = preProcessData(data);
   var md = toMarkdown(data, {
     converters: [
@@ -15,6 +15,14 @@ function convert(data) {
         },
         replacement: function(content) {
           return '{% highlight php %}{% raw %}\n' + content + '\n{% endraw %}{% endhighlight %}';
+        }
+      },
+      {
+        filter: function(node) {
+          return (node.nodeName === "A" && node.getAttribute('href') && node.getAttribute('href').indexOf('http') !== 0 && node.getAttribute('href').indexOf('#') !== 0 && node.getAttribute('href').indexOf('attachments') !== 0);
+        },
+        replacement: function(content, node) {
+          return '{% link "' + content + '" ' + node.getAttribute('href') + ' %}';
         }
       },
       {
@@ -58,12 +66,6 @@ function convert(data) {
 function preProcessData(data) {
   $ = cheerio.load(data);
 
-  // insert anchors
-  // $("#main-content [id!=''][id]").each(function() {
-  //   var anchor = "<a id='" + $(this).attr('id') + "'></a>";
-  //   $(this).before(anchor);
-  // });
-
   // fix table of contents
   $(".toc-macro a").each(function() {
     var anchor = utils.convertToAnchor($(this).text());
@@ -75,15 +77,15 @@ function preProcessData(data) {
 
 function postProcessMarkdown(md) {
   // add / before image urls
-  var re = /\!\[(.*)\]\((.*)\)/g;
-  var subst = '![$1]({{ site.baseurl }}/$2)';
+  var re = /\!\[(.*)\]\((.*?)\)/g;
+  var subst = '![$1]({{site.baseurl}}/$2)';
 
   return md.replace(re, subst);
 }
 
 function fixLinks(content, dictionary) {
   _.each(dictionary, function(item, index, list) {
-    content = content.replace(item.oldLink, '{{ baseurl_lang }}/' + item.newLink);
+    content = content.replace(item.oldLink, item.identifier);
   });
 
   return content;
@@ -124,25 +126,29 @@ function getFilepathFor(categories) {
   return path.join.apply(null, categories);
 }
 
-function getFrontMatter(data) {
+function getFrontMatter(data, id) {
   var template =
 `---
+identifier: %%identifier%%
 layout: article_with_sidebar
 lang: en
 title: '%%title%%'
-%%replace_mark%%
-categories: %%categories%%
+{&
+categories:
+  %%categories%%
+&}
 ---
 
-{% include global.html %}
 `;
+
+  template = template.replace('%%identifier%%', id);
 
   var categories = getCategories(data);
 
   if (categories.length < 1) {
-    template = template.replace('%%categories%%', '[home]');
+    template = template.replace('%%categories%%', '- home');
   } else {
-    template = template.replace('%%categories%%', '[' + utils.sanitizeFilename(categories[0]) + ']');
+    template = template.replace('%%categories%%', '- ' + categories[0]);
   }
 
   var match = data.match(/<span id="title-text">\s(?:.*) : (.*)\s/);
@@ -159,118 +165,109 @@ function postprocessFrontMatter(template, identifier) {
   switch(identifier) {
     case 'Basics':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 3
 icon: sitemap
-description: Understand what technologies and approaches used in the X-Cart core and learn how to achieve typical tasks
----
-`;
+description: Understand what technologies and approaches used in the X-Cart core and learn how to achieve typical tasks`;
       break;
 
     case 'Changelog':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 11
 icon: announcement
-description: Discover new features and bugfixes
----
-`;
+description: Discover new features and bugfixes`;
       break;
 
     case 'Changing store logic':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 4
 icon: setting
-description: Learn how to adapt the X-Cart workflow and enlarge possibilities for your customers
----
-`;
+description: Learn how to adapt the X-Cart workflow and enlarge possibilities for your customers`;
       break;
 
     case 'Customization examples':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 5
 icon: pencil square o
-description: Take a look at some of the customizations, made for our clients
----
-`;
+description: Take a look at some of the customizations, made for our clients`;
       break;
 
     case 'Design changes':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 3
 icon: paint brush
-description: Learn how to make your X-Cart store eye pretty. Discover design patterns for making X-Cart themes.
----
-`;
+description: Learn how to make your X-Cart store eye pretty. Discover design patterns for making X-Cart themes.`;
       break;
 
     case 'Drafts':
       append =
-`categories: []
----
-`;
+`categories: []`;
       break;
 
     case 'Getting started':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 1
 icon: rocket
-description: Start developing for X-Cart without any hassle. Speed up your work process with X-Cart SDK
----
-`;
+description: Start developing for X-Cart without any hassle. Speed up your work process with X-Cart SDK`;
       break;
 
     case 'How-To Articles':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 5
 icon: info circle
-description: Study different guides to achieve features that you need
----
-`;
+description: Study different guides to achieve features that you need`;
       break;
 
     case 'Migration guides':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 5
 icon: retweet
-description: Get a grip on the process of migrating your shopping cart and customization modules.
----
-`;
+description: Get a grip on the process of migrating your shopping cart and customization modules.`;
       break;
 
     case 'Setting up X-Cart 5 environment':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 9
 icon: server
-description: Discover how to setup an environment for your X-Cart store
----
-`;
+description: Discover how to setup an environment for your X-Cart store`;
       break;
 
     case 'Webinars and video tutorials':
       append =
-`categories: [home]
+`categories:
+  - home
 order: 10
 icon: youtube play
-description: Live video from our developers and associates
----
-`;
+description: Live video from our developers and associates`;
       break;
 
     default:
-      append = '---';
+      append = '$1';
       break;
   }
 
-  template = template.substring(0, template.indexOf("%%replace_mark%%") + '%%replace_mark%%'.length);
-  template = template.replace('%%replace_mark%%', append);
+  if (append !== null) {
+    var re = /{&\s*([\S\s]*)\s*&}/i;
+
+    template = template.replace(re, append);
+  }
 
   return template;
 }

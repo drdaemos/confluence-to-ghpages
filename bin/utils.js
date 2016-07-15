@@ -2,6 +2,8 @@ var fs = require('fs');
 var path = require('path');
 var mkdirp = require('mkdirp');
 var sanitize = require("sanitize-filename");
+var rand = require("random-key");
+var _ = require('underscore');
 
 function rmDir(dirPath, removeSelf) {
   if (removeSelf === undefined)
@@ -38,9 +40,14 @@ function convertToAnchor(string) {
   return string.toLowerCase().replace(/\s/g, '-');
 }
 
+function getUniqueId() {
+  return 'ref_' + rand.generate(8);
+}
+
 String.prototype.contains = function(it) { return this.indexOf(it) !== -1; };
 
 exports.rmDir = rmDir;
 exports.createDir = createDir;
 exports.sanitizeFilename = sanitizeFilename;
 exports.convertToAnchor = convertToAnchor;
+exports.getUniqueId = getUniqueId;

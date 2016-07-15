@@ -52,7 +52,9 @@ Processor.prototype.convertFiles = function (files) {
         fs.readFile(filePath, 'utf-8', (err, data) => {
           if (err) throw err;
 
-          var converted = converter.convert(data);
+          var uniqid = utils.getUniqueId();
+
+          var converted = converter.convert(data, uniqid);
           var folderPath = converter.getFilepath(data);
           var filename = converter.getFilename(data) || path.basename(file, '.html');
 
@@ -60,6 +62,7 @@ Processor.prototype.convertFiles = function (files) {
           self.movedLinks.push({
             'oldLink': file,
             'newLink': path.join(folderPath, filename + '.html'),
+            'identifier': uniqid
           });
 
           utils.createDir(path.join(outputFolder, folderPath));
@@ -186,6 +189,7 @@ Processor.prototype.fixLinks = function () {
 
     self.setupProgressBar(files.length, 'Fixing moved links');
 
+    fs.writeFileSync(path.join(self.output, 'links.yml'), self.generateRefsFile());
 
     files.forEach( function( file, index ) {
       var filePath = file;
@@ -210,6 +214,12 @@ Processor.prototype.fixLinks = function () {
     });
 
   });
+}
+
+Processor.prototype.generateRefsFile = function () {
+  return _.map(this.movedLinks, function(item) {
+    return item.identifier + ': "' + item.newLink + '"';
+  }).join('\n');
 }
 
 module.exports = Processor;
