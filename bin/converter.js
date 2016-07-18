@@ -3,6 +3,7 @@ var _ = require('underscore');
 var toMarkdown = require('to-markdown');
 var path = require('path');
 var utils = require('./utils');
+var dateFormat = require('dateformat');
 
 function convert(data, id) {
   var frontmatter = getFrontMatter(data, id);
@@ -75,6 +76,16 @@ function preProcessData(data) {
   return $.html();
 }
 
+function getLastUpdateMark(data) {
+  $ = cheerio.load(data);
+  var re = /on\s*([\s\S]*?)\s*$/;
+
+  var match = $('.page-metadata').text().match(re);
+  var date = match !== null ? Date.parse(match[1]) : Date.now();
+
+  return dateFormat(date, 'yyyy-mm-dd HH:MM');
+}
+
 function postProcessMarkdown(md) {
   // add / before image urls
   var re = /\!\[(.*)\]\((.*?)\)/g;
@@ -130,6 +141,7 @@ function getFrontMatter(data, id) {
   var template =
 `---
 identifier: %%identifier%%
+updated_at: %%updated_at%%
 layout: article_with_sidebar
 lang: en
 title: '%%title%%'
@@ -140,6 +152,8 @@ categories:
 ---
 
 `;
+
+  template = template.replace('%%updated_at%%', getLastUpdateMark(data));
 
   template = template.replace('%%identifier%%', id);
 
